@@ -1,0 +1,84 @@
+Połączenie z bazą danych sqllite:
+
+1. W wartswie Persistence tworzymy klasę DataContext : DbContext, tam też tworzymy właściowści DbSet<...>
+2. W warstwie API w pliku Program dodajemy serwis z ustawieniami:
+
+builder.Services.AddDbContext<DataContext>(opt =>
+{
+    opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
+
+3. DefaultConnection (ścieżka do bazy) ustawiamy w pliku konfiguracyjnym appsettings.json:
+
+"ConnectionStrings": {
+    "DefaultConnection": "Data Source=reactivities.db"
+  }
+
+
+Przeprowadzanie pierwszej migracji (na podstawie kodu w c# modelu, tworzymy tabelę bazy danych).
+
+1. Instalujemy paczkę: Microsoft.EntityFrameworkCore.Design z nuget do projektu API.
+2. Przechodzimy do konsoli na poziomie pliku sln i wpisujemy komendę:
+	dotnet ef migrations add InitialCreate -s API [nazwa projektu] -p Persistence [nazwa projektu z DBContext]
+
+[Może się przydać - pierwszy komentarz o odpowiednim zainstalowaniu Microsoft.EntityFrameworkCore.Sqlite]
+https://www.thecodebuzz.com/startup-project-does-not-reference-entityframeworkcore-design/
+
+3. W projekcie Persistence powinien powstać folder Migration
+
+
+Utworzenie bazy danych na podstawie DataContext i migracji [projekt Persistence]. W pliku Program.cs w warrstwie API piszemy kod:
+
+using var scope = app.Services.CreateScope();
+var services = scope.ServiceProvider;
+
+try
+{
+    var context = services.GetRequiredService<DataContext>();
+    context.Database.Migrate();
+}
+catch (Exception ex)
+{
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "An error occured during migration");
+}
+
+Jeśli wcześniej nie było bazy danych, to wówczas baza zostanie utworzona na podstawie migracji.
+
+Jak już w bazie będą dane, w celu ich pobrania musimy utworzyć odpowiedni kontroler.
+
+1. Tworzymy klasę bazową dla kontrolera:
+
+using Microsoft.AspNetCore.Mvc;
+
+namespace API.Controllers
+{
+    [ApiController]
+    [Route("[controller]")]
+    public class BaseApiController : ControllerBase
+    {
+    }
+}
+
+2. Teraz tworzymy kontroler dziedziczący po klasie bazowej:
+
+public class ActivitiesController : BaseApiController
+    {
+        private readonly DataContext _context;
+        public ActivitiesController(DataContext context) 
+        {
+            _context = context;
+        }
+
+        [HttpGet] // api/activities
+        public async Task<ActionResult<List<Activity>>> GetActivities()
+        {
+            return await _context.Activities.ToListAsync();
+        }
+
+        [HttpGet("{id}")] // API/activities/ffjfjfjjhfjhf
+        public async Task<ActionResult<Activity>> GetActivity(Guid id)
+        {
+            return await _context.Activities.FindAsync(id);
+        }
+    }
