@@ -1,0 +1,26 @@
+1. Po co są CancellationTokens. Jeśli w metodzie Handle, kod wykonuje się długo i użytkownik stwierdził, że ,,odpuści" - zrezygnował w trakcie, to na serwerze zapytanie dalej się wykonuje. Stąd potrzebny mechanizm, który temu zapobiegnie. Anuluje zapytanie, jeśli nie jest już potrzebne.
+
+2. Żeby użyć CancellationToken w naszej architekturze, należy go przekazać z controllera do metody handle:
+
+zapytanie kontaktuje się z naszym api przez http request, a następnie controller api przekazuje zapytanie przez mediatora do handlera. Stąd musimy przekazać ct z kontrolera do handlera:
+
+public async Task<ActionResult<List<Activity>>> GetActivities(CancellationToken ct)
+        {
+            return await Mediator.Send(new List.Query(), ct);
+        }
+
+public async Task<List<Activity>> Handle(Query request, CancellationToken cancellationToken)
+            {
+		try
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+		}
+		catch (System.Exception)
+		{	
+			...	
+		}
+
+                return await _context.Activities.ToListAsync();
+            }
+
+W DALSZYCZ NOTATKACH NIE BĘDZIEMY UŻYWAĆ TEGO MECHANIZMU

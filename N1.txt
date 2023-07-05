@@ -76,9 +76,28 @@ public class ActivitiesController : BaseApiController
             return await _context.Activities.ToListAsync();
         }
 
-        [HttpGet("{id}")] // API/activities/ffjfjfjjhfjhf
+        [HttpGet("{id}")] // api/activities/ffjfjfjjhfjhf
         public async Task<ActionResult<Activity>> GetActivity(Guid id)
         {
             return await _context.Activities.FindAsync(id);
         }
     }
+
+
+
+
+Tworzenie aplikacji reacta. 
+
+W aplikacji react będziemy korzystać z narzędzia Axios, musimy go zainstalować.
+Porzebne do uderzania do API.
+
+Do stylowania można użyć framweorka css Semantic-UI (najpierw należy go zainstalować).
+W celu instalacji wpisujemy:
+npm install semantic-ui-react semantic-ui-css
+zaś potem w pliku wejściowym, czyli index.tsx dodać zależność:
+import 'semantic-ui-css/semantic.min.css'
+
+
+
+
+################### SEKCJA 4 ##############################################################

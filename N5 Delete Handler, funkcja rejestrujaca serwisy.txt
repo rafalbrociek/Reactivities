@@ -1,0 +1,83 @@
+1. Teraz, podobnie jak wcześniej dodamy kolejną operację CRUD - Delete Handler (na razie nie robimy walidacji - tzn zakładamy, że aktywność, którą usuwamy istnieje).
+
+using MediatR;
+using Persistence;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Application.Activities
+{
+    public class Delete
+    {
+        public class Command : IRequest
+        {
+            // usuwamy tylko po id
+            public Guid Id { get; set; }
+        }
+
+        public class Handler : IRequestHandler<Command>
+        {
+            private readonly DataContext _context;
+
+            public Handler(DataContext context)
+            {
+                _context = context;
+            }
+
+            public async Task<Unit> Handle(Command request, CancellationToken cancellationToken)
+            {
+                var activity = await _context.Activities.FindAsync(request.Id);
+
+                // na razie usuwamy z ,,pamięci"
+                _context.Remove(activity);
+
+                // zapisujemy zmiany w bazie danych
+                await _context.SaveChangesAsync();
+
+                return Unit.Value;
+            }
+        }
+    }
+}
+
+
+2. Dodajemy endpoint DeleteActivity do kontrolera
+
+
+3. Porządku w naszej aplikacji. Plik API/Program.cs (punkt wejścia dla aplikacji) trzeba uporządkować. Rejestrowanie seriwsów przeniesiemy do metody rozszerzające (tzw. ExtensionMethod). W tym celu w projekcie API tworzymy folder Extension [jest to powszechna praktyka wśród programistów]. Tworzymy statyczną klasę ApplicationServiceExtensions z metodą AddAplicationServices(this IServiceCollection services) - metoda rozszerzająca, dowiedzieć się więcej o this w tym konteksćie [przekazujemy metodzie obiekt services 
+        /// i rozszerzamy go wewnątrz metody]. 
+Kopiujemy odpowiednią zwartość (rejestrację serwisów) z Program.cs do statycznej metody (zamieniamy builder.Services na services, a builder.Configuration na config).
+
+public static IServiceCollection AddApplicationServices(this IServiceCollection services,
+            IConfiguration config)
+        {
+            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+            services.AddEndpointsApiExplorer();
+            services.AddSwaggerGen();
+            services.AddDbContext<DataContext>(opt =>
+            {
+                opt.UseSqlite(config.GetConnectionString("DefaultConnection"));
+            });
+            // dodanie polityki prywatności
+            services.AddCors(opt =>
+            {
+                opt.AddPolicy("CorsPolicy", policy =>
+                {
+                    policy.AllowAnyMethod().AllowAnyHeader().WithOrigins("http://localhost:3000");
+                });
+            });
+
+            services.AddMediatR(typeof(List.Handler));
+            // serwis autoMappera
+            services.AddAutoMapper(typeof(MappingProfiles).Assembly);
+
+            return services;
+        }
+
+
+4. Teraz tylko w Program.cs używamy tej metody przekazując jej konfigurację:
+
+builder.Services.AddApplicationServices(builder.Configuration);

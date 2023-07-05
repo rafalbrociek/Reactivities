@@ -1,0 +1,55 @@
+Teraz stworzymy warstwę Application (tu będą przychodzić żądania http) i dzięki wzorcowi mediatora będziemy się komunikować z aplikacją.
+
+1. Instalujemy paczkę nuget MediaR.Extensions.Microsoft.DependencyInjection.
+
+2. W warstwie application dodajemy nową klasę List (będzie odpowiedzialna za pobranie listy aktywności). Imlementuje ona interfejs mediatora i zawiera w sobie dwie klasy: Query oraz Handler.
+
+3. W klasie Handler implementujemy interfejs IRequestHandler. W tym celu dodajemy konstruktor z kontekstem danych oraz metodę Task<List<Activity>>.
+
+4. Teraz obiekt typu IMediator wstrzykujemy do ActivitiesController i komunikujemy się przez mediatora. Przerabiamy trochę klasę ActivitiesController.
+[Z tego co zrozumiałem Mediator pośredniczy pomiędzy projektem API, a Application]
+
+public class ActivitiesController : BaseApiController
+    {
+        private readonly IMediator _mediator;
+        public ActivitiesController(IMediator mediator) 
+        {
+            _mediator = mediator;
+        }
+
+        [HttpGet] // api/activities
+        public async Task<ActionResult<List<Activity>>> GetActivities()
+        {
+            return await _mediator.Send(new List.Query());
+        }
+
+        [HttpGet("{id}")] // api/activities/ffjfjfjjhfjhf
+        public async Task<ActionResult<Activity>> GetActivity(Guid id)
+        {
+            return Ok();
+        }
+    }
+
+
+5. Musimy zarejestrować mediatora jako serwis (podając gdzie jest Handler).
+
+builder.Services.AddMediatR(typeof(List.Handler)); [Program.cs - warstwa API]
+
+6. Teraz porządkujemy kod. Skoro mediator będzie potrzebny w większości klas kontrolerów, to przenieśmy go do BaseApiController:
+
+namespace API.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class BaseApiController : ControllerBase
+    {
+        private IMediator _mediator;
+
+        // jeśli mediator jest nullem to przypisz do niego prawą stronę
+        protected IMediator Mediator => _mediator ??= 
+            HttpContext.RequestServices.GetService<IMediator>();
+    }
+}
+
+Teraz możemy usunąć pole _mediator i konstruktor z klasy ActivitiesController. Jeśli będzie potrzeba odnieść się do mediatora to poprzez właściwość Mediator z klasy bazowej.
+
