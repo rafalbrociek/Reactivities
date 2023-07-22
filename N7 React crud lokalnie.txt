@@ -1,0 +1,174 @@
+1. Struktura plików. wszystko co w folderze public zostanie opublikowane w finalnej apce
+zastosujemy strukture podziału na foldery ze względu na feature (funkconalności)
+w src dodamy dwa foldery: app - nie tyczy się jakiejś specjalnej funkcjonalności, raczej do wspólnych rzeczy oraz folder feature.
+W folderze app dodajemy folder layout i wrzucamy do niego wszystko co związane z układem strony (App.tsx oraz index.css, któremu zmieniamy nazwę na style.css - styl globalny apki). Usuwamy następujące pliki: App.css, App.text.tsx i logo.svg. W pliku index.css uaktualniamy ścieżkę importu do .app/layout/style.css. Robimy porządek z importami: usuwamy import loga i App.css z pliku App.tsx 
+
+2. Przy użyciu typescript tworzymy interfejs dla aktywności. Sprawi to, że łatwiej będziemy mogli wychwycać błędy. W tym celu w folderze app tworzymy folder models, a w nim plik activity.ts i tam utworzymy interfejs. Teraz edytujemy plik App.tsx:
+
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { Header, List } from 'semantic-ui-react';
+import {Activity} from '../models/activity'
+
+function App() {
+  // zmienna activities trzyma tablicę aktywności
+  // funkcja setActivities ustawia tę tablicę
+  // używamy typescript i w useState mówimy, że activities będzie tablicą obiektów typu Activity
+  const [activities, setActivities] = useState<Activity[]>([]);
+
+  // za każdym razem jak komponent się zaktualizuje, to od razu pobiera dane z API
+  // drugi pusty argument zapobiega wpadnięciu w nieskończoną pętle
+  // bo za każdym razem jak pobrane zostaną dane, komponent jest aktualizowany
+  // a jak jest aktualizwoany to na nowo pobiera dane
+  useEffect(() => 
+  {
+    axios.get<Activity[]>('http://localhost:5000/api/activities')
+      .then(response => 
+        {
+          setActivities(response.data);
+        })
+  }, [])
+
+  return (
+    <div>
+      <Header as='h2' icon='users' content='Reactivities' />
+        <List>
+          {activities.map(activity => 
+          (
+            <List.Item key={activity.id}>
+              {activity.title}
+            </List.Item>
+          ))}
+        </List>
+    </div>
+  );
+}
+
+export default App;
+
+
+3. Dodajemy navbar (patrz plik layout/NavBar.tsx) i menu wybrane z Semantic UI React (potrzebny odpowiedni import).
+
+import React from "react";
+import { Button, Container, Menu } from "semantic-ui-react";
+
+export default function NavBar() {
+    return(
+        <Menu inverted fixed="top">
+            <Container>
+                <Menu.Item header>
+                    <img src="/assets/logo.png" alt="logo" />
+                    Reactivities
+                </Menu.Item>
+                <Menu.Item name="Activities" />
+                <Menu.Item>
+                    <Button positive content="Create Activity" />
+                </Menu.Item>
+            </Container>
+        </Menu>
+    )
+}
+
+4. Dodajemy teraz zbudowany komponent <NavBar /> do pliku App.tsx zamiast <Header>.
+
+
+5. Stylujemy NavBar. Najpierw tworzymy folder assets w public i kopiujemy do niego pliki graficzne (png). Teraz stylujemy: 1) styl inline w pliku App.tsx lub 2) globalnie przechodzimy do pliku styles.css
+Wskazówka w React - jak tworzymy widok zamiast zewnętrznych div lepiej dać fragment - tyczy się to sytuacji, gdy komponent zwraca więcej niż jeden główny elemeny np. 
+<NavBar />
+<Container>
+...
+</Container>
+wtedy pakujemy to w <div> lub <fragment>
+
+6. Tworzymy komponent dashboard (panel) dla aktywnosci - patrz plik feature/activities/dashboard/ActivityDashboard.tsx Patrz element <Grid> z semantic-ui. Używamy go w App.tsx. Przekazujemy komponentowi <ActivityDashboard> kolekcję aktywności w postaci parametru. Przyjrzeć się jak się odbiera parametry od komponentu-rodzica i jak się tworzy intefejsy (z użyciem interfejsu i obiektem props albo robić 'rozbijać' przekazywany parametr (patrz różnica w plikach <ActivityDasboard> i <ActivityList>)
+
+7. Tworzenie Listy aktywności (<ActivityList>) jako dziecko komponentu <ActivityDasboard>.
+
+8. Tworzenie komponentu odpowiedzialnego za wyświetlanie detali aktywności <ActivityDetails> i jego użycie w komponencie <ActivityDashboard>
+
+9. Dodawanie formularza tworzenia aktywności (plik ActivityForm.tsx).
+
+10. Do tej pory tworzyliśmy widoki (koponenty). Teraz trzeba zadbać o funkcjonalność - jaki widok ma być wybrany do pokazania szczegółów (zależy od kliknięcia przycisku "View"). Potrzeba będzie przechowania wybranej (klikniętej) aktywności (tzn. obiektu aktywności ze stanem) i przekazanie jej do komponentu <ActivityDetails>. Tworzymy zatem pole, które będzie przechowywać stan wybranej aktywności. Robimy to na poziomie pliku App.tsx:
+
+const [selectedActivity, setSelectedActivity] = useState<Activity | undefined>(undefined);
+// drugie undefined to stan początkowy tego pola. W tym samym pliku tworzymy następujące funkcje:
+
+function handleSelectActivity(id: string){
+    // find zwraca aktywność o danym id - przekazanym jako parametr funkcji
+    setSelectedActivity(activities.find(x => x.id === id));
+  }
+
+  function handleCancelSelectActivity(){
+    setSelectedActivity(undefined);
+  }
+
+I teraz obie powyższe funkcje oraz wybraną zależność przekazujemy komponentowi <ActivityDashboard>
+
+<ActivityDashboard 
+          activities={activities}
+          selectedActivity={selectedActivity}
+          selectActivity={handleSelectActivity}
+          cancelSelectActivity={handleCancelSelectActivity}
+         />
+
+a w komponencie <ActiveDashboard> przekazujemy funkcję selectActivity komponentowi <ActivityList>. Pamiętajmy o zmianie obiektów Props w klasach w odpowiedni sposób. Użyjemy tej funkcji (selectActivity) przy kliknięciu Button "View".
+Komponentowi <ActivityDetails> przekazujemy obiekt selectedActivity i metodę cancelSelectActivity.
+
+11. Teraz przechodzimy do funkcjonalności tworzenia nowej aktywności. Kliknięcie w przycisk View powoduje załadowanie danej aktywności do widoku. Metoda onClick Buttona.
+
+12. Wyświetlanie formularza tworzenia/edycji aktywności. W głównym pliku App.tsx tworzymy stany/zmienna (useState) na dane formularza i czy jesteśmy w trybie edycji. Dodajemy metody odpowiedzialne za funkcjonalność kiedy formularz ma być wyświetlony:
+
+function handleFormOpen(id?: string){
+    id ? handleSelectActivity(id) : handleCancelSelectActivity();
+    setEditMode(true);
+  }
+
+  function handleFormClose(){
+    setEditMode(false);
+  }
+
+Przekazujemy editMode i 2 funkcie do <ActivityDashboard>. Tam sporo zmian w plikach (tyczy się nawigacji przekazywaniu danych i oprogramowaniu zdarzenie onClick Buttonów).
+
+13. Teraz zajmiemy się funkcjonalnością edycji formularza. Jak React zarządza stanem formularza? W komponencie <ActivityForm> tworzymy obiekt initialState. Jeśli wybrana aktywność nie jest undefined, to ona będzie initialState, w przeciwnym razie ustawiamy puste stringi (patrz plik ActivityForm.tsx). Bardzo ważne! Jak uaktualniać stan formularza:
+
+// zmiana pól formularza pociąga zmianę stanu obiektu activity
+    // metoda ta jest za to odpowiedzialna
+    // metodzie tej przekazywany jest event z danymi (które pole tekstowe jest uaktualniane)
+    function handleInputChange(event: ChangeEvent<HTMLInputElement>){
+        // wyłuskanie z eventu informacji o nazwie kontrolki i wartości
+        const {name, value} = event.target;
+
+        // operator ... (spread operator) rozbija obiekt na składowe
+        // [name]: value - szuka właściwości o nazwie pod zmienną name
+        // i uaktualnia ją o wartość value
+        setActivity({...activity, [name]: value});
+    }
+
+    return(
+        <Segment clearing>
+            <Form onSubmit={handleSubmit}>
+                <Form.Input placeholder='Title' value={activity.title} name='title' 			onChange={handleInputChange}></Form.Input>
+
+Podobnie pozostałe pola formularza.
+
+14. Terazzajmiemy się funkcjonalnością dodawania/edytowania aktywności po kliknięciu przycisku submit. W pliku App.tsx dodajemy funkcję:
+
+function handleCreateOrEditActivity(activity: Activity)
+  {
+    // jeśli id istnieje, to edytujemy aktwyność,
+    // w przeciwnym razie dodajemy nową
+    activity.id
+      ? setActivities([...activities.filter(x => x.id !== activity.id), activity]) // filtruj wszystkie oprócz uaktualnianej, po czym dodaj uaktualnioną
+      : setActivities([...activities, activity]);
+      setEditMode(false);
+      setSelectedActivity(activity);
+  }
+
+To na razie jest lokalnie. Problem jest też z tworzeniem aktywności, bo nigdzie nie tworzymy nowego id. Do tego użyjemy pakietu uuid:
+
+npm install uuid
+
+15. Funkcjonalność usuwania aktywności z listy.
+
+
+
