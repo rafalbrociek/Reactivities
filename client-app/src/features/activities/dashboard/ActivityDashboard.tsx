@@ -1,16 +1,27 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Grid } from "semantic-ui-react";
 import ActivityList from "./ActivityList";
-import ActivityDetails from "../details/ActivityDetails";
-import ActivityForm from "../form/ActivityForm";
 import { useStore } from "../../../app/stores/store";
 import { observer } from "mobx-react-lite";
+import LoadingComponent from "../../../app/layout/LoadingComponent";
 
 
 export default observer(function ActivityDashboard(){
 
     const {activityStore} = useStore();
-    const {selectedActivity, editMode} = activityStore;
+    const {loadActivities, activityRegistry} = activityStore;
+
+    // za każdym razem jak komponent się zaktualizuje, to od razu pobiera dane z API
+    // drugi pusty argument zapobiega wpadnięciu w nieskończoną pętle
+    // bo za każdym razem jak pobrane zostaną dane, komponent jest aktualizowany
+    // a jak jest aktualizwoany to na nowo pobiera dane
+    useEffect(() => {
+        if(activityRegistry.size <= 1) loadActivities();
+    }, [loadActivities, activityRegistry.size])
+
+    // jeśli dane są ładowane
+    if(activityStore.loadingInitial) return <LoadingComponent content='Loading...' />
+
 
     return(
         <Grid>
@@ -18,14 +29,7 @@ export default observer(function ActivityDashboard(){
                 <ActivityList />
             </Grid.Column>
             <Grid.Column width='6'>
-                {/* Ważne. Ponieważ React najpierw ładuje wszystkie komponenty i próbuje je wyświetlić*/}
-                {/* przekazywany do komponentu <ActivityDetails> obiekt activities[0] */}
-                {/* może nie istnieć, stąd dodajemy warunek i łączymy go operatorem && */}
-                {/* Wyświetl komponent dopiero jak obiekt activities[0] będzie zdefiniowany */}
-                {selectedActivity && !editMode &&
-                    <ActivityDetails />}
-                {editMode && 
-                    <ActivityForm />}
+                <h2>Activity filter</h2>
             </Grid.Column>
         </Grid>
     )

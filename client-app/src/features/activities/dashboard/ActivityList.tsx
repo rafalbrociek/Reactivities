@@ -2,6 +2,7 @@ import React, { SyntheticEvent, useState } from "react";
 import { Button, Item, Label, Segment } from "semantic-ui-react";
 import { useStore } from "../../../app/stores/store";
 import { observer } from "mobx-react-lite";
+import { Link } from "react-router-dom";
 
 
 export default observer(function ActivityList() {
@@ -10,7 +11,7 @@ export default observer(function ActivityList() {
     // jak kilkamy 'delete' chcemy, aby tylko ten konkretny przycisk
     // miał tzw. loading. Rozróżniamy przyciski po właściwości 'name' 
     // (tak naprawdę to id aktywności - patrz Button niżej)
-    // niżej, do właściwości Buttona loading przypisujemy iloczyn submitting (boolean) 
+    // niżej, do właściwości Buttona loading przypisujemy iloczyn loading (boolean) 
     // i sprawdzenie czy dany przycisk jest targetem 
     // e to obiekt z informacją o zdarzeniu
     const [target, setTarget] = useState('');
@@ -32,7 +33,7 @@ export default observer(function ActivityList() {
                                 <div>{activity.city}, {activity.venue}</div>
                             </Item.Description>
                             <Item.Extra>
-                                <Button onClick={() => activityStore.selectActivity(activity.id)} floated='right' content='View' color='blue' />
+                                <Button as={Link} to={`/activities/${activity.id}`} floated='right' content='View' color='blue' />
                                 <Button
                                     name={activity.id} 
                                     loading={loading && target === activity.id} 
